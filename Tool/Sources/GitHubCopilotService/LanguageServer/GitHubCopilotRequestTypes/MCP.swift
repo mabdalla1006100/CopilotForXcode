@@ -155,14 +155,3 @@ public struct UpdateMCPToolsStatusParams: Codable, Hashable {
 }
 
 public typealias CopilotMCPToolsRequest = JSONRPCRequest<GetAllToolsParams>
-
-public struct MCPOAuthRequestParams: Codable, Hashable {
-    public var mcpServer: String
-    public var authLabel: String
-}
-
-public struct MCPOAuthResponse: Codable, Hashable {
-    public var confirm: Bool
-}
-
-public typealias MCPOAuthRequest = JSONRPCRequest<MCPOAuthRequestParams>

@@ -1,12 +1,13 @@
 import Client
+import ComposableArchitecture
+import ConversationServiceProvider
 import Foundation
+import GitHubCopilotService
 import Logger
 import SharedUIComponents
 import SwiftUI
+import SystemUtils
 import Toast
-import ConversationServiceProvider
-import GitHubCopilotService
-import ComposableArchitecture
 
 struct MCPConfigView: View {
     @State private var mcpConfig: String = ""
@@ -16,11 +17,12 @@ struct MCPConfigView: View {
     @State private var lastModificationDate: Date? = nil
     @State private var fileMonitorTask: Task<Void, Error>? = nil
     @State private var isMCPFFEnabled = false
+    @State private var isEditorPreviewEnabled = false
     @State private var selectedOption = ToolType.MCP
     @Environment(\.colorScheme) var colorScheme
 
     private static var lastSyncTimestamp: Date? = nil
-    
+
     enum ToolType: String, CaseIterable, Identifiable {
         case MCP, BuiltIn
         var id: Self { self }
@@ -30,25 +32,45 @@ struct MCPConfigView: View {
         WithPerceptionTracking {
             ScrollView {
                 Picker("", selection: $selectedOption) {
-                    Text("MCP").tag(ToolType.MCP)
-                    Text("Built-In").tag(ToolType.BuiltIn)
+                    if #available(macOS 26.0, *) {
+                        Text("MCP".padded(centerTo: 24, with: "\u{2002}")).tag(ToolType.MCP)
+                        Text("Built-In".padded(centerTo: 24, with: "\u{2002}")).tag(ToolType.BuiltIn)
+                    } else {
+                        Text("MCP").tag(ToolType.MCP)
+                        Text("Built-In").tag(ToolType.BuiltIn)
+                    }
                 }
-                .pickerStyle(.segmented)
                 .frame(width: 400)
-                
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .padding(.top, 12)
+                .padding(.bottom, 4)
+
                 Group {
                     if selectedOption == .MCP {
                         VStack(alignment: .leading, spacing: 8) {
                             MCPIntroView(isMCPFFEnabled: $isMCPFFEnabled)
                             if isMCPFFEnabled {
                                 MCPManualInstallView()
+
+                                if isEditorPreviewEnabled && ( SystemUtils.isPrereleaseBuild || SystemUtils.isDeveloperMode ) {
+                                    MCPRegistryURLView()
+                                }
+
                                 MCPToolsListView()
+
+                                HStack {
+                                    Spacer()
+                                    AdaptiveHelpLink(action: { NSWorkspace.shared.open(
+                                        URL(string: "https://modelcontextprotocol.io/introduction")!
+                                    ) })
+                                }
                             }
                         }
                         .onAppear {
                             setupConfigFilePath()
                             Task {
-                                await updateMCPFeatureFlag()
+                                await updateFeatureFlag()
                             }
                         }
                         .onDisappear {
@@ -57,7 +79,7 @@ struct MCPConfigView: View {
                         .onChange(of: isMCPFFEnabled) { newMCPFFEnabled in
                             if newMCPFFEnabled {
                                 startMonitoringConfigFile()
-                                refreshConfiguration(())
+                                refreshConfiguration()
                             } else {
                                 stopMonitoringConfigFile()
                             }
@@ -65,23 +87,24 @@ struct MCPConfigView: View {
                         .onReceive(DistributedNotificationCenter.default()
                             .publisher(for: .gitHubCopilotFeatureFlagsDidChange)) { _ in
                                 Task {
-                                    await updateMCPFeatureFlag()
+                                    await updateFeatureFlag()
                                 }
-                            }
+                        }
                     } else {
                         BuiltInToolsListView()
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, 20)
             }
         }
     }
-    
-    private func updateMCPFeatureFlag() async {
+
+    private func updateFeatureFlag() async {
         do {
             let service = try getService()
             if let featureFlags = try await service.getCopilotFeatureFlags() {
                 isMCPFFEnabled = featureFlags.mcp
+                isEditorPreviewEnabled = featureFlags.editorPreviewFeatures
             }
         } catch {
             Logger.client.error("Failed to get copilot feature flags: \(error)")
@@ -101,7 +124,7 @@ struct MCPConfigView: View {
             try? """
             {
                 "servers": {
-                    
+
                 }
             }
             """.write(to: configFileURL, atomically: true, encoding: .utf8)
@@ -174,7 +197,7 @@ struct MCPConfigView: View {
                     if let validJson = readAndValidateJSON(from: configFileURL) {
                         await MainActor.run {
                             mcpConfig = validJson
-                            refreshConfiguration(validJson)
+                            refreshConfiguration()
                             toast("MCP configuration file updated", .info)
                         }
                     } else {
@@ -194,7 +217,7 @@ struct MCPConfigView: View {
         fileMonitorTask = nil
     }
 
-    func refreshConfiguration(_: Any) {
+    func refreshConfiguration() {
         if MCPConfigView.lastSyncTimestamp == lastModificationDate {
             return
         }
@@ -218,6 +241,16 @@ struct MCPConfigView: View {
                 toast(error.localizedDescription, .error)
             }
         }
+    }
+}
+
+extension String {
+    func padded(centerTo total: Int, with pad: Character = " ") -> String {
+        guard count < total else { return self }
+        let deficit = total - count
+        let left = deficit / 2
+        let right = deficit - left
+        return String(repeating: pad, count: left) + self + String(repeating: pad, count: right)
     }
 }
 

@@ -55,7 +55,6 @@ struct MCPManualInstallView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
                         Text("Example Configuration").foregroundColor(.primary.opacity(0.85))
-
                         CopyButton(
                             copy: {
                                 NSPasteboard.general.clearContents()
@@ -151,10 +150,4 @@ struct MCPManualInstallView: View {
         let url = URL(fileURLWithPath: mcpConfigFilePath)
         NSWorkspace.shared.open(url)
     }
-}
-
-#Preview {
-    MCPManualInstallView()
-        .padding()
-        .frame(width: 900)
 }

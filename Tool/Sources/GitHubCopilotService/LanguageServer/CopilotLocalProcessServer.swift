@@ -29,12 +29,37 @@ public enum ServerError: LocalizedError {
                                        message: error.message,
                                        data: error.data)
     }
+    
+    static func decodingError(_ error: DecodingError) -> ServerError {
+        let message: String
+        
+        switch error {
+        case .typeMismatch(let type, let context):
+            message = "Type mismatch: Expected \(type). \(context.debugDescription)"
+            
+        case .valueNotFound(let type, let context):
+            message = "Value not found: Expected \(type). \(context.debugDescription)"
+            
+        case .keyNotFound(let key, let context):
+            message = "Key '\(key.stringValue)' not found. \(context.debugDescription)"
+            
+        case .dataCorrupted(let context):
+            message = "Data corrupted: \(context.debugDescription)"
+            
+        @unknown default:
+            message = error.localizedDescription
+        }
+        
+        return ServerError.serverError(code: -32700, message: message, data: nil)
+    }
 
     static func convertToServerError(error: any Error) -> ServerError {
         if let serverError = error as? ServerError {
             return serverError
         } else if let jsonRPCError = error as? AnyJSONRPCResponseError {
             return responseError(jsonRPCError)
+        } else if let decodeError = error as? DecodingError {
+            return decodingError(decodeError)
         }
         
         return .unknownError(error)

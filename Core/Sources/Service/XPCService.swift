@@ -329,7 +329,7 @@ public class XPCService: NSObject, XPCServiceProtocol {
                 reply(data, nil)
             } catch {
                 Logger.service.error("Failed to list MCP Registry servers: \(error)")
-                reply(nil, error)
+                reply(nil, NSError.from(error))
             }
         }
     }
@@ -352,7 +352,7 @@ public class XPCService: NSObject, XPCServiceProtocol {
                 reply(data, nil)
             } catch {
                 Logger.service.error("Failed to get MCP Registry servers: \(error)")
-                reply(nil, error)
+                reply(nil, NSError.from(error))
             }
         }
     }

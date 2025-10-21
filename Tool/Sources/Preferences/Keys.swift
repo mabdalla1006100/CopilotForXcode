@@ -603,4 +603,12 @@ public extension UserDefaultPreferenceKeys {
     var currentUserName: PreferenceKey<String> {
         .init(defaultValue: "", key: "CurrentUserName")
     }
+    
+    var mcpRegistryURL: PreferenceKey<String> {
+        .init(defaultValue: "https://api.mcp.github.com/2025-09-15/v0/servers", key: "MCPRegistryURL")
+    }
+    
+    var mcpRegistryURLHistory: PreferenceKey<[String]> {
+        .init(defaultValue: [], key: "MCPRegistryURLHistory")
+    }
 }

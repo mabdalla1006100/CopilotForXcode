@@ -12,6 +12,13 @@ public struct Repository: Codable {
     public let source: String
     public let id: String?
     public let subfolder: String?
+    
+    public init(url: String, source: String, id: String?, subfolder: String?) {
+        self.url = url
+        self.source = source
+        self.id = id
+        self.subfolder = subfolder
+    }
 
     enum CodingKeys: String, CodingKey {
         case url, source, id, subfolder
@@ -108,7 +115,7 @@ public protocol ArgumentProtocol: InputProtocol {
 
 // MARK: - Positional Argument
 
-public struct PositionalArgument: ArgumentProtocol {
+public struct PositionalArgument: ArgumentProtocol, Hashable {
     public let type: ArgumentType = .positional
     public let description: String?
     public let isRequired: Bool?
@@ -129,13 +136,40 @@ public struct PositionalArgument: ArgumentProtocol {
         case valueHint = "value_hint"
         case isRepeated = "is_repeated"
     }
+    
+    // Implement Hashable
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(type)
+        hasher.combine(description)
+        hasher.combine(isRequired)
+        hasher.combine(format)
+        hasher.combine(value)
+        hasher.combine(isSecret)
+        hasher.combine(defaultValue)
+        hasher.combine(choices)
+        hasher.combine(valueHint)
+        hasher.combine(isRepeated)
+    }
+    
+    public static func == (lhs: PositionalArgument, rhs: PositionalArgument) -> Bool {
+        lhs.type == rhs.type &&
+        lhs.description == rhs.description &&
+        lhs.isRequired == rhs.isRequired &&
+        lhs.format == rhs.format &&
+        lhs.value == rhs.value &&
+        lhs.isSecret == rhs.isSecret &&
+        lhs.defaultValue == rhs.defaultValue &&
+        lhs.choices == rhs.choices &&
+        lhs.valueHint == rhs.valueHint &&
+        lhs.isRepeated == rhs.isRepeated
+    }
 }
 
 // MARK: - Named Argument
 
-public struct NamedArgument: ArgumentProtocol {
+public struct NamedArgument: ArgumentProtocol, Hashable {
     public let type: ArgumentType = .named
-    public let name: String
+    public let name: String?
     public let description: String?
     public let isRequired: Bool?
     public let format: ArgumentFormat?
@@ -153,11 +187,37 @@ public struct NamedArgument: ArgumentProtocol {
         case defaultValue = "default"
         case isRepeated = "is_repeated"
     }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(type)
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(isRequired)
+        hasher.combine(format)
+        hasher.combine(value)
+        hasher.combine(isSecret)
+        hasher.combine(defaultValue)
+        hasher.combine(choices)
+        hasher.combine(isRepeated)
+    }
+    
+    public static func == (lhs: NamedArgument, rhs: NamedArgument) -> Bool {
+        lhs.type == rhs.type &&
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.isRequired == rhs.isRequired &&
+        lhs.format == rhs.format &&
+        lhs.value == rhs.value &&
+        lhs.isSecret == rhs.isSecret &&
+        lhs.defaultValue == rhs.defaultValue &&
+        lhs.choices == rhs.choices &&
+        lhs.isRepeated == rhs.isRepeated
+    }
 }
 
 // MARK: - Argument Enum
 
-public enum Argument: Codable {
+public enum Argument: Codable, Hashable {
     case positional(PositionalArgument)
     case named(NamedArgument)
 
@@ -188,8 +248,8 @@ public enum Argument: Codable {
 
 // MARK: - KeyValueInput
 
-public struct KeyValueInput: InputProtocol {
-    public let name: String
+public struct KeyValueInput: InputProtocol, Hashable {
+    public let name: String?
     public let description: String?
     public let isRequired: Bool?
     public let format: ArgumentFormat?
@@ -198,6 +258,28 @@ public struct KeyValueInput: InputProtocol {
     public let defaultValue: String?
     public let choices: [String]?
     public let variables: [String: Input]?
+    
+    public init(
+        name: String,
+        description: String?,
+        isRequired: Bool?,
+        format: ArgumentFormat?,
+        value: String?,
+        isSecret: Bool?,
+        defaultValue: String?,
+        choices: [String]?,
+        variables: [String : Input]?
+    ) {
+        self.name = name
+        self.description = description
+        self.isRequired = isRequired
+        self.format = format
+        self.value = value
+        self.isSecret = isSecret
+        self.defaultValue = defaultValue
+        self.choices = choices
+        self.variables = variables
+    }
 
     enum CodingKeys: String, CodingKey {
         case name, description, format, value, choices, variables
@@ -205,11 +287,36 @@ public struct KeyValueInput: InputProtocol {
         case isSecret = "is_secret"
         case defaultValue = "default"
     }
+    
+    // Implement Hashable
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(isRequired)
+        hasher.combine(format)
+        hasher.combine(value)
+        hasher.combine(isSecret)
+        hasher.combine(defaultValue)
+        hasher.combine(choices)
+        // Note: variables is excluded as Input would also need to be Hashable
+    }
+    
+    public static func == (lhs: KeyValueInput, rhs: KeyValueInput) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.isRequired == rhs.isRequired &&
+        lhs.format == rhs.format &&
+        lhs.value == rhs.value &&
+        lhs.isSecret == rhs.isSecret &&
+        lhs.defaultValue == rhs.defaultValue &&
+        lhs.choices == rhs.choices
+        // Note: variables is excluded as Input would also need to be Hashable
+    }
 }
 
 // MARK: - Package
 
-public struct Package: Codable {
+public struct Package: Codable, Hashable {
     public let registryType: String?
     public let registryBaseURL: String?
     public let identifier: String?
@@ -219,6 +326,28 @@ public struct Package: Codable {
     public let runtimeArguments: [Argument]?
     public let packageArguments: [Argument]?
     public let environmentVariables: [KeyValueInput]?
+    
+    public init(
+        registryType: String?,
+        registryBaseURL: String?,
+        identifier: String?,
+        version: String?,
+        fileSHA256: String?,
+        runtimeHint: String?,
+        runtimeArguments: [Argument]?,
+        packageArguments: [Argument]?,
+        environmentVariables: [KeyValueInput]?
+    ) {
+        self.registryType = registryType
+        self.registryBaseURL = registryBaseURL
+        self.identifier = identifier
+        self.version = version
+        self.fileSHA256 = fileSHA256
+        self.runtimeHint = runtimeHint
+        self.runtimeArguments = runtimeArguments
+        self.packageArguments = packageArguments
+        self.environmentVariables = environmentVariables
+    }
 
     enum CodingKeys: String, CodingKey {
         case version, identifier
@@ -235,21 +364,61 @@ public struct Package: Codable {
 // MARK: - Transport Type
 
 public enum TransportType: String, Codable {
-    case streamable = "streamable"
     case streamableHttp = "streamable-http"
+    case http = "http"
     case sse = "sse"
+    
+    public var displayText: String {
+        switch self {
+        case .streamableHttp:
+            return "Streamable HTTP"
+        case .http:
+            return "HTTP"
+        case .sse:
+            return "SSE"
+        }
+    }
 }
 
 // MARK: - Remote
 
-public struct Remote: Codable {
+public struct Remote: Codable, Hashable {
     public let transportType: TransportType
     public let url: String
     public let headers: [KeyValueInput]?
+    
+    public init(
+        transportType: TransportType,
+        url: String,
+        headers: [KeyValueInput]?
+    ) {
+        self.transportType = transportType
+        self.url = url
+        self.headers = headers
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Try "transport_type" first, then fall back to "type"
+        transportType = try container.decodeIfPresent(TransportType.self, forKey: .transportTypePreferred) 
+                    ?? container.decode(TransportType.self, forKey: .transportType)
+        
+        url = try container.decode(String.self, forKey: .url)
+        headers = try container.decodeIfPresent([KeyValueInput].self, forKey: .headers)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(transportType, forKey: .transportTypePreferred)
+        try container.encode(url, forKey: .url)
+        try container.encodeIfPresent(headers, forKey: .headers)
+    }
 
     enum CodingKeys: String, CodingKey {
         case url, headers
         case transportType = "type"
+        case transportTypePreferred = "transport_type"
     }
 }
 
@@ -261,20 +430,21 @@ public struct PublisherProvidedMeta: Codable {
     public let buildInfo: BuildInfo?
     private let additionalProperties: [String: AnyCodable]?
 
-    public struct BuildInfo: Codable {
-        public let commit: String?
-        public let timestamp: String?
-        public let pipelineID: String?
-
-        enum CodingKeys: String, CodingKey {
-            case commit, timestamp
-            case pipelineID = "pipeline_id"
-        }
-    }
-
     enum CodingKeys: String, CodingKey {
         case tool, version
         case buildInfo = "build_info"
+    }
+    
+    public init(
+        tool: String?,
+        version: String?,
+        buildInfo: BuildInfo?,
+        additionalProperties: [String: AnyCodable]? = nil
+    ) {
+        self.tool = tool
+        self.version = version
+        self.buildInfo = buildInfo
+        self.additionalProperties = additionalProperties
     }
 
     public init(from decoder: Decoder) throws {
@@ -310,6 +480,23 @@ public struct PublisherProvidedMeta: Codable {
     }
 }
 
+public struct BuildInfo: Codable {
+    public let commit: String?
+    public let timestamp: String?
+    public let pipelineID: String?
+    
+    public init(commit: String?, timestamp: String?, pipelineID: String?) {
+        self.commit = commit
+        self.timestamp = timestamp
+        self.pipelineID = pipelineID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case commit, timestamp
+        case pipelineID = "pipeline_id"
+    }
+}
+
 // MARK: - Official Meta
 
 public struct OfficialMeta: Codable {
@@ -317,6 +504,18 @@ public struct OfficialMeta: Codable {
     public let publishedAt: String
     public let updatedAt: String
     public let isLatest: Bool
+    
+    public init(
+        id: String,
+        publishedAt: String,
+        updatedAt: String,
+        isLatest: Bool
+    ) {
+        self.id = id
+        self.publishedAt = publishedAt
+        self.updatedAt = updatedAt
+        self.isLatest = isLatest
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -336,6 +535,16 @@ public struct ServerMeta: Codable {
     enum CodingKeys: String, CodingKey {
         case publisherProvided = "io.modelcontextprotocol.registry/publisher-provided"
         case official = "io.modelcontextprotocol.registry/official"
+    }
+    
+    public init(
+        publisherProvided: PublisherProvidedMeta?,
+        official: OfficialMeta?,
+        additionalProperties: [String: AnyCodable]? = nil
+    ) {
+        self.publisherProvided = publisherProvided
+        self.official = official
+        self.additionalProperties = additionalProperties
     }
 
     public init(from decoder: Decoder) throws {
@@ -402,6 +611,34 @@ public struct MCPRegistryServerDetail: Codable {
     public let packages: [Package]?
     public let remotes: [Remote]?
     public let meta: ServerMeta?
+    
+    public init(
+        name: String,
+        description: String,
+        status: ServerStatus?,
+        repository: Repository?,
+        version: String,
+        websiteURL: String?,
+        createdAt: String?,
+        updatedAt: String?,
+        schemaURL: String?,
+        packages: [Package]?,
+        remotes: [Remote]?,
+        meta: ServerMeta?
+    ) {
+        self.name = name
+        self.description = description
+        self.status = status
+        self.repository = repository
+        self.version = version
+        self.websiteURL = websiteURL
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.schemaURL = schemaURL
+        self.packages = packages
+        self.remotes = remotes
+        self.meta = meta
+    }
 
     enum CodingKeys: String, CodingKey {
         case name, description, status, repository, version, packages, remotes

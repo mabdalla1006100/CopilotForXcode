@@ -272,7 +272,8 @@ public class GitHubCopilotBaseService {
                         "copilotCapabilities": [
                             /// The editor has support for watching files over LSP
                             "watchedFiles": watchedFiles,
-                            "didChangeFeatureFlags": true
+                            "didChangeFeatureFlags": true,
+                            "stateDatabase": true
                         ],
                         "githubAppId": authAppId.map(JSONValue.string) ?? .null,
                     ],
@@ -464,15 +465,12 @@ public final class GitHubCopilotService:
                 for await event in server.eventSequence {
                     switch event {
                     case let .request(id, request):
-                        switch request {
-                        case let .custom(method, params, callback):
-                            if method == "copilot/mcpOAuth" && projectRootURL.path == "/" {
-                                continue
-                            }
-                            self.serverRequestHandler.handleRequest(.init(id: id, method: method, params: params), workspaceURL: workspaceURL, callback: callback, service: self)
-                        default:
-                            break
-                        }
+                        self.serverRequestHandler.handleRequest(
+                            id: id,
+                            request,
+                            workspaceURL: workspaceURL,
+                            service: self
+                        )
                     default:
                         break
                     }

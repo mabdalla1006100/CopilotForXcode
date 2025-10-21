@@ -19,6 +19,15 @@ public enum XPCExtensionServiceError: Swift.Error, LocalizedError {
             return "Connection to extension service error: \(error.localizedDescription)"
         }
     }
+    
+    public var underlyingError: Error? {
+        switch self {
+        case let .xpcServiceError(error):
+            return error
+        default:
+            return nil
+        }
+    }
 }
 
 public class XPCExtensionService {
