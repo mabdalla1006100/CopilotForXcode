@@ -15,10 +15,22 @@ struct MCPServerToolsSection: View {
 
     private var serverToggleLabel: some View {
         HStack(spacing: 8) {
-            Text("MCP Server: \(serverTools.name)").fontWeight(.medium)
-            if serverTools.status == .error {
+            Text("MCP Server: \(serverTools.name)")
+                .fontWeight(.medium)
+                .foregroundStyle(
+                    serverTools.status == .running ? .primary : .tertiary
+                )
+            if serverTools.status == .error || serverTools.status == .blocked {
                 let message = extractErrorMessage(serverTools.error?.description ?? "")
-                Badge(text: message, level: .danger, icon: "xmark.circle.fill")
+                if serverTools.status == .error {
+                    Badge(text: message, level: .danger, icon: "xmark.circle.fill")
+                } else if serverTools.status == .blocked {
+                    Badge(text: serverTools.registryInfo ?? "Blocked", level: .warning, icon: "exclamationmark.triangle.fill")
+                }
+            } else if let registryInfo = serverTools.registryInfo {
+                Text(registryInfo)
+                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11))
             }
             Spacer()
         }
@@ -33,7 +45,7 @@ struct MCPServerToolsSection: View {
         }
         .toggleStyle(.checkbox)
         .padding(.leading, 4)
-        .disabled(serverTools.status == .error)
+        .disabled(serverTools.status == .error || serverTools.status == .blocked)
     }
     
     private var divider: some View {
@@ -67,7 +79,7 @@ struct MCPServerToolsSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Conditional view rendering based on error state
-            if serverTools.status == .error {
+            if serverTools.status == .error || serverTools.status == .blocked {
                 // No disclosure group for error state
                 VStack(spacing: 0) {
                     serverToggle.padding(.leading, 12)
@@ -178,7 +190,7 @@ struct MCPServerToolsSection: View {
         // Create status update for all tools
         let serverUpdate = UpdateMCPToolsStatusServerCollection(
             name: serverTools.name,
-            tools: allServerTools.map { 
+            tools: allServerTools.map {
                 UpdatedMCPToolsStatus(name: $0.name, status: enabled ? .enabled : .disabled)
             }
         )

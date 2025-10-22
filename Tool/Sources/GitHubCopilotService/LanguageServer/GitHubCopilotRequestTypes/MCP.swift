@@ -7,6 +7,7 @@ public enum MCPServerStatus: String, Codable, Equatable, Hashable {
     case running = "running"
     case stopped = "stopped"
     case error = "error"
+    case blocked = "blocked"
 }
 
 public struct InputSchema: Codable, Equatable, Hashable {
@@ -109,12 +110,20 @@ public struct MCPServerToolsCollection: Codable, Equatable, Hashable {
     public let status: MCPServerStatus
     public let tools: [MCPTool]
     public let error: String?
+    public let registryInfo: String?
     
-    public init(name: String, status: MCPServerStatus, tools: [MCPTool], error: String? = nil) {
+    public init(
+        name: String,
+        status: MCPServerStatus,
+        tools: [MCPTool],
+        error: String? = nil,
+        registryInfo: String? = nil
+    ) {
         self.name = name
         self.status = status
         self.tools = tools
         self.error = error
+        self.registryInfo = registryInfo
     }
 }
 

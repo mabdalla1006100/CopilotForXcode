@@ -7,10 +7,12 @@ struct MCPRegistryURLSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var originalMcpRegistryURL: String = ""
     @State private var isFormValid: Bool = true
-
+    
+    let mcpRegistryEntry: MCPRegistryEntry?
     let onURLUpdated: (() -> Void)?
     
-    init(onURLUpdated: (() -> Void)? = nil) {
+    init(mcpRegistryEntry: MCPRegistryEntry? = nil, onURLUpdated: (() -> Void)? = nil) {
+        self.mcpRegistryEntry = mcpRegistryEntry
         self.onURLUpdated = onURLUpdated
     }
 
@@ -28,6 +30,7 @@ struct MCPRegistryURLSheet: View {
                     MCPRegistryURLInputField(
                         urlText: $originalMcpRegistryURL,
                         isSheet: true,
+                        mcpRegistryEntry: mcpRegistryEntry,
                         onValidationChange: { isValid in
                             isFormValid = isValid
                         }
@@ -46,7 +49,7 @@ struct MCPRegistryURLSheet: View {
                         dismiss()
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(!isFormValid)
+                    .disabled(!isFormValid || mcpRegistryEntry?.registryAccess == .registryOnly)
                 }
             }
             .textFieldStyle(.plain)

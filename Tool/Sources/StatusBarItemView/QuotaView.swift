@@ -374,11 +374,19 @@ extension QuotaView {
             button.translatesAutoresizingMaskIntoConstraints = false
             button.bezelStyle = .push
             if isFreeQuotaUsedUp {
-                button.attributedTitle = NSAttributedString(
-                    string: upgradeTitle,
-                    attributes: [.foregroundColor: NSColor.white]
-                )
-                button.bezelColor = .controlAccentColor
+                if #available(macOS 26.0, *) {
+                    button.attributedTitle = NSAttributedString(
+                        string: upgradeTitle,
+                        attributes: [.foregroundColor: NSColor.controlTextColor]
+                    )
+                    button.bezelColor = .controlBackgroundColor
+                } else {
+                    button.attributedTitle = NSAttributedString(
+                        string: upgradeTitle,
+                        attributes: [.foregroundColor: NSColor.white]
+                    )
+                    button.bezelColor = .controlAccentColor
+                }
             } else {
                 button.title = upgradeTitle
             }

@@ -22,10 +22,12 @@ final class MCPServerGalleryViewModel: ObservableObject {
     // Loading flags
     @Published private(set) var isInitialLoading: Bool = false
     @Published private(set) var isLoadingMore: Bool = false
+    @Published private(set) var isRefreshing: Bool = false
 
     // Transient presentation state
     @Published var pendingServer: MCPRegistryServerDetail?
     @Published var infoSheetServer: MCPRegistryServerDetail?
+    @Published var mcpRegistryEntry: MCPRegistryEntry?
 
     @AppStorage(\.mcpRegistryURL) var mcpRegistryURL
 
@@ -34,11 +36,13 @@ final class MCPServerGalleryViewModel: ObservableObject {
 
     init(
         initialList: MCPRegistryServerList,
-        pageSize: Int = 30,
+        mcpRegistryEntry: MCPRegistryEntry? = nil,
+        pageSize: Int = 30
     ) {
         self.pageSize = pageSize
         servers = initialList.servers
         registryMetadata = initialList.metadata
+        self.mcpRegistryEntry = mcpRegistryEntry
     }
 
     // MARK: - Derived Data
@@ -141,6 +145,9 @@ final class MCPServerGalleryViewModel: ObservableObject {
 
     func refresh() {
         Task {
+            isRefreshing = true
+            defer { isRefreshing = false }
+            
             // Clear the current server list
             servers = []
             registryMetadata = nil
@@ -149,6 +156,40 @@ final class MCPServerGalleryViewModel: ObservableObject {
             // Load servers from the base URL
             await loadServerList(resetToFirstPage: true)
         }
+    }
+    
+    func refreshFromURL(mcpRegistryEntry: MCPRegistryEntry? = nil) async {
+        isRefreshing = true
+        defer { isRefreshing = false }
+        
+        // Clear the current server list immediately
+        servers = []
+        registryMetadata = nil
+        searchText = ""
+        self.mcpRegistryEntry = mcpRegistryEntry
+        Logger.client.info("Cleared gallery view model data for refresh")
+        
+        // Load servers from the base URL
+        await loadServerList(resetToFirstPage: true)
+        
+        // Reload installed servers after fetching new data
+        loadInstalledServers()
+    }
+    
+    func updateData(serverList: MCPRegistryServerList, mcpRegistryEntry: MCPRegistryEntry? = nil) {
+        servers = serverList.servers
+        registryMetadata = serverList.metadata
+        self.mcpRegistryEntry = mcpRegistryEntry
+        searchText = ""
+        loadInstalledServers()
+        Logger.client.info("Updated gallery view model with \(serverList.servers.count) servers and registry entry: \(String(describing: mcpRegistryEntry))")
+    }
+    
+    func clearData() {
+        servers = []
+        registryMetadata = nil
+        searchText = ""
+        Logger.client.info("Cleared gallery view model data")
     }
 
     func showInfo(_ server: MCPRegistryServerDetail) {

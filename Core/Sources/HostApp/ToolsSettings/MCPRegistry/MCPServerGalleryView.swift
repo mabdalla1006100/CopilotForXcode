@@ -8,17 +8,29 @@ import SwiftUI
 
 enum MCPServerGalleryWindow {
     static let identifier = "MCPServerGalleryWindow"
+    private static weak var currentViewModel: MCPServerGalleryViewModel?
 
-    static func open(serverList: MCPRegistryServerList) {
+    @MainActor static func open(
+        serverList: MCPRegistryServerList,
+        mcpRegistryEntry: MCPRegistryEntry? = nil
+    ) {
         if let existing = NSApp.windows.first(where: { $0.identifier?.rawValue == identifier }) {
+            // Update existing window with new data
+            update(serverList: serverList, mcpRegistryEntry: mcpRegistryEntry)
             existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
 
+        let viewModel = MCPServerGalleryViewModel(
+            initialList: serverList,
+            mcpRegistryEntry: mcpRegistryEntry
+        )
+        currentViewModel = viewModel
+        
         let controller = NSHostingController(
             rootView: MCPServerGalleryView(
-                mcpRegistryServerList: serverList
+                viewModel: viewModel
             )
         )
 
@@ -32,6 +44,21 @@ enum MCPServerGalleryWindow {
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    @MainActor static func update(
+        serverList: MCPRegistryServerList,
+        mcpRegistryEntry: MCPRegistryEntry? = nil
+    ) {
+        currentViewModel?.updateData(serverList: serverList, mcpRegistryEntry: mcpRegistryEntry)
+    }
+    
+    @MainActor static func refreshFromURL(mcpRegistryEntry: MCPRegistryEntry? = nil) async {
+        await currentViewModel?.refreshFromURL(mcpRegistryEntry: mcpRegistryEntry)
+    }
+    
+    static func isOpen() -> Bool {
+        return NSApp.windows.first(where: { $0.identifier?.rawValue == identifier }) != nil
     }
 }
 
@@ -49,15 +76,11 @@ private struct IdentifiableServer: Identifiable {
 }
 
 struct MCPServerGalleryView: View {
-    @StateObject private var viewModel: MCPServerGalleryViewModel
+    @ObservedObject var viewModel: MCPServerGalleryViewModel
     @State private var isShowingURLSheet = false
 
-    init(mcpRegistryServerList: MCPRegistryServerList) {
-        _viewModel = StateObject(
-            wrappedValue: MCPServerGalleryViewModel(
-                initialList: mcpRegistryServerList
-            )
-        )
+    init(viewModel: MCPServerGalleryViewModel) {
+        self.viewModel = viewModel
     }
 
     // MARK: - Body
@@ -138,25 +161,38 @@ struct MCPServerGalleryView: View {
     }
 
     private var serverListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                serverRows
+        ZStack {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    serverRows
 
-                if viewModel.shouldShowLoadMoreSentinel {
-                    Color.clear
-                        .frame(height: 1)
-                        .onAppear { viewModel.loadMoreIfNeeded() }
-                        .accessibilityHidden(true)
-                }
+                    if viewModel.shouldShowLoadMoreSentinel {
+                        Color.clear
+                            .frame(height: 1)
+                            .onAppear { viewModel.loadMoreIfNeeded() }
+                            .accessibilityHidden(true)
+                    }
 
-                if viewModel.isLoadingMore {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                            .padding(.vertical, 12)
-                        Spacer()
+                    if viewModel.isLoadingMore {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                                .padding(.vertical, 12)
+                            Spacer()
+                        }
                     }
                 }
+            }
+            
+            if viewModel.isRefreshing {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Loading servers...")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(nsColor: .controlBackgroundColor).opacity(0.95))
             }
         }
     }
@@ -174,10 +210,13 @@ struct MCPServerGalleryView: View {
     }
 
     private var urlSheet: some View {
-        MCPRegistryURLSheet(onURLUpdated: {
-            viewModel.refresh()
-        })
-        .frame(width: 500, height: 150)
+        MCPRegistryURLSheet(
+            mcpRegistryEntry: viewModel.mcpRegistryEntry,
+            onURLUpdated: {
+                viewModel.refresh()
+            }
+        )
+        .frame(width: 500, height: 200)
     }
 
     private func rowBackground(for index: Int) -> Color {

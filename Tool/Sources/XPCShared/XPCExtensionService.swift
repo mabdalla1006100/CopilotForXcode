@@ -467,6 +467,31 @@ extension XPCExtensionService {
     }
     
     @XPCServiceActor
+    public func getMCPRegistryAllowlist() async throws -> GetMCPRegistryAllowlistResult? {
+        return try await withXPCServiceConnected {
+            service, continuation in
+            service.getMCPRegistryAllowlist { data, error in
+                if let error {
+                    continuation.reject(error)
+                    return
+                }
+
+                guard let data else {
+                    continuation.resume(nil)
+                    return
+                }
+
+                do {
+                    let response = try JSONDecoder().decode(GetMCPRegistryAllowlistResult.self, from: data)
+                    continuation.resume(response)
+                } catch {
+                    continuation.reject(error)
+                }
+            }
+        }
+    }
+    
+    @XPCServiceActor
     public func getAvailableLanguageModelTools() async throws -> [LanguageModelTool]? {
         return try await withXPCServiceConnected {
             service, continuation in

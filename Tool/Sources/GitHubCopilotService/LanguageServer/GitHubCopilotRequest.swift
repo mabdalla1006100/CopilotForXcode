@@ -441,6 +441,14 @@ enum GitHubCopilotRequest {
         }
     }
     
+    struct MCPRegistryGetAllowlist: GitHubCopilotRequestType {
+        typealias Response = GetMCPRegistryAllowlistResult
+        
+        var request: ClientRequest {
+            .custom("mcp/registry/getAllowlist", .hash([:]), ClientRequest.NullHandler)
+        }
+    }
+    
     // MARK: - Conversation Agents
     
     struct GetAgents: GitHubCopilotRequestType {

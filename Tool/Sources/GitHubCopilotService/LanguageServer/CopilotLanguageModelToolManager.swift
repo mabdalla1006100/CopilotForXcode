@@ -24,8 +24,8 @@ public class CopilotLanguageModelToolManager {
         }
 
         // Map previous and new by name for merging.
-        let previousByName = Dictionary(uniqueKeysWithValues: previous.map { ($0.name, $0) })
-        let incomingByName = Dictionary(uniqueKeysWithValues: tools.map { ($0.name, $0) })
+        let previousByName = Dictionary(previous.map { ($0.name, $0) }) { first, _ in first }
+        let incomingByName = Dictionary(tools.map { ($0.name, $0) }) { first, _ in first }
 
         var merged: [LanguageModelTool] = []
 

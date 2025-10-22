@@ -95,10 +95,10 @@ extension AppState {
         
         // Get all available server names and their respective tool names
         let availableServerMap = Dictionary(
-            uniqueKeysWithValues: availableTools.map { collection in
+            availableTools.map { collection in
                 (collection.name, Set(collection.tools.map { $0.name }))
             }
-        )
+        ) { first, _ in first }
         
         // Remove servers that don't exist in available tools
         existingServers.removeAll { !availableServerMap.keys.contains($0.name) }

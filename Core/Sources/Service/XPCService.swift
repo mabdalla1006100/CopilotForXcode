@@ -356,6 +356,20 @@ public class XPCService: NSObject, XPCServiceProtocol {
             }
         }
     }
+    
+    public func getMCPRegistryAllowlist(withReply reply: @escaping (Data?, Error?) -> Void) {
+        Task { @MainActor in
+            do {
+                let service = try GitHubCopilotViewModel.shared.getGitHubCopilotAuthService()
+                let response = try await service.getMCPRegistryAllowlist()
+                let data = try? JSONEncoder().encode(response)
+                reply(data, nil)
+            } catch {
+                Logger.service.error("Failed to get MCP Registry allowlist: \(error)")
+                reply(nil, NSError.from(error))
+            }
+        }
+    }
 
     // MARK: - Language Model Tools
     public func getAvailableLanguageModelTools(withReply reply: @escaping (Data?) -> Void) {

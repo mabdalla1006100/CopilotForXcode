@@ -173,7 +173,7 @@ public class MCPRegistryService: ObservableObject {
 
         // Add headers if present
         if let headers = remote.headers, !headers.isEmpty {
-            let headersDict = Dictionary(uniqueKeysWithValues: headers.map { ($0.name, $0.value ?? "") })
+            let headersDict = Dictionary(headers.map { ($0.name, $0.value ?? "") }) { first, _ in first }
             config["requestInit"] = ["headers": headersDict]
         }
 
@@ -208,7 +208,7 @@ public class MCPRegistryService: ObservableObject {
 
         // Environment variables
         if let envVars = package.environmentVariables, !envVars.isEmpty {
-            config["env"] = Dictionary(uniqueKeysWithValues: envVars.map { ($0.name, $0.value ?? "") })
+            config["env"] = Dictionary(envVars.map { ($0.name, $0.value ?? "") }) { first, _ in first }
         }
 
         addMetadata(to: &config, serverDetail: serverDetail)
@@ -344,10 +344,22 @@ public class MCPRegistryService: ObservableObject {
     }
 
     public func createRegistryServerKey(registryURL: String, serverId: String) -> String {
-        return "\(registryURL)|\(serverId)"
+        let baseURL = normalizeRegistryURL(registryURL)
+        return "\(baseURL)|\(serverId)"
     }
 
     // MARK: - Registry Key Helpers
+    
+    private func normalizeRegistryURL(_ url: String) -> String {
+        // Remove trailing /v0/servers, /v0.1/servers or similar version paths
+        var normalized = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let range = normalized.range(of: "/v\\d+(\\.\\d+)?/servers$", options: .regularExpression) {
+            normalized = String(normalized[..<range.lowerBound])
+        }
+        // Remove trailing slash
+        return normalized.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+    
     private func expectedRegistryKey(for serverDetail: MCPRegistryServerDetail) -> String? {
         guard let serverId = Self.getServerId(from: serverDetail),
               let registryURL = try? getRegistryURL() else { return nil }

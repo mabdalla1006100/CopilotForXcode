@@ -273,7 +273,7 @@ public class GitHubCopilotBaseService {
                             /// The editor has support for watching files over LSP
                             "watchedFiles": watchedFiles,
                             "didChangeFeatureFlags": true,
-                            "stateDatabase": true
+                            "stateDatabase": true,
                         ],
                         "githubAppId": authAppId.map(JSONValue.string) ?? .null,
                     ],
@@ -802,6 +802,18 @@ public final class GitHubCopilotService:
         do {
             let response = try await sendRequest(
                 GitHubCopilotRequest.MCPRegistryGetServer(params: params)
+            )
+            return response
+        } catch {
+            throw error
+        }
+    }
+    
+    @GitHubCopilotSuggestionActor
+    public func getMCPRegistryAllowlist() async throws -> GetMCPRegistryAllowlistResult {
+        do {
+            let response = try await sendRequest(
+                GitHubCopilotRequest.MCPRegistryGetAllowlist()
             )
             return response
         } catch {

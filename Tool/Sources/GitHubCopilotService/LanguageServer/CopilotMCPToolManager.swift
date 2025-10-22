@@ -15,7 +15,12 @@ public class CopilotMCPToolManager {
         availableMCPServerTools = sortedMCPServerTools
         DispatchQueue.main.async {
             Logger.client.info("Notify about MCP tools change: \(getToolsSummary())")
-            DistributedNotificationCenter.default().post(name: .gitHubCopilotMCPToolsDidChange, object: nil)
+            DistributedNotificationCenter.default().postNotificationName(
+                .gitHubCopilotMCPToolsDidChange,
+                object: nil,
+                userInfo: nil,
+                deliverImmediately: true
+            )
         }
     }
 
@@ -45,7 +50,12 @@ public class CopilotMCPToolManager {
     public static func clearMCPTools() {
         availableMCPServerTools = []
         DispatchQueue.main.async {
-            DistributedNotificationCenter.default().post(name: .gitHubCopilotMCPToolsDidChange, object: nil)
+            DistributedNotificationCenter.default().postNotificationName(
+                .gitHubCopilotMCPToolsDidChange,
+                object: nil,
+                userInfo: nil,
+                deliverImmediately: true
+            )
         }
     }
 }

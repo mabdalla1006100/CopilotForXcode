@@ -71,6 +71,10 @@ struct MCPConfigView: View {
                             setupConfigFilePath()
                             Task {
                                 await updateFeatureFlag()
+                                // Start monitoring if feature is already enabled on initial load
+                                if isMCPFFEnabled {
+                                    startMonitoringConfigFile()
+                                }
                             }
                         }
                         .onDisappear {
@@ -179,18 +183,22 @@ struct MCPConfigView: View {
         stopMonitoringConfigFile()  // Stop existing monitoring if any
 
         isMonitoring = true
+        Logger.client.info("Starting MCP config file monitoring")
 
         fileMonitorTask = Task {
             let configFileURL = URL(fileURLWithPath: configFilePath)
 
             // Check for file changes periodically
             while isMonitoring {
-                try? await Task.sleep(nanoseconds: 3_000_000_000)  // Check every 3 seconds
+                try? await Task.sleep(nanoseconds: 3_000_000_000)  // Check every 1 second for better responsiveness
+
+                guard isMonitoring else { break }  // Extra check after sleep
 
                 let currentDate = getFileModificationDate(url: configFileURL)
 
                 if let currentDate = currentDate, currentDate != lastModificationDate {
                     // File modification date has changed, update our record
+                    Logger.client.info("MCP config file change detected")
                     lastModificationDate = currentDate
 
                     // Read and validate the updated content
@@ -204,14 +212,18 @@ struct MCPConfigView: View {
                         // If JSON is invalid, show error
                         await MainActor.run {
                             toast("Invalid JSON in MCP configuration file", .error)
+                            Logger.client.info("Invalid JSON detected during monitoring")
                         }
                     }
                 }
             }
+            Logger.client.info("Stopped MCP config file monitoring")
         }
     }
 
     private func stopMonitoringConfigFile() {
+        guard isMonitoring else { return }
+        Logger.client.info("Stopping MCP config file monitoring")
         isMonitoring = false
         fileMonitorTask?.cancel()
         fileMonitorTask = nil
