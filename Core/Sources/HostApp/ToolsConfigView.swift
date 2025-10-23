@@ -22,6 +22,8 @@ struct MCPConfigView: View {
     @Environment(\.colorScheme) var colorScheme
 
     private static var lastSyncTimestamp: Date? = nil
+    @State private var debounceTimer: Timer?
+    private static let refreshDebounceInterval: TimeInterval = 1.0 // 1.0 second debounce
 
     enum ToolType: String, CaseIterable, Identifiable {
         case MCP, BuiltIn
@@ -241,16 +243,24 @@ struct MCPConfigView: View {
             UserDefaults.shared.set(jsonString, for: \.gitHubCopilotMCPConfig)
         }
 
-        Task {
-            do {
-                let service = try getService()
-                try await service.postNotification(
-                    name: Notification.Name
-                        .gitHubCopilotShouldRefreshEditorInformation.rawValue
-                )
-                toast("MCP configuration updated", .info)
-            } catch {
-                toast(error.localizedDescription, .error)
+        // Debounce the refresh notification to avoid sending too frequently
+        debounceTimer?.invalidate()
+        debounceTimer = Timer.scheduledTimer(withTimeInterval: MCPConfigView.refreshDebounceInterval, repeats: false) { _ in
+            Task {
+                do {
+                    let service = try getService()
+                    try await service.postNotification(
+                        name: Notification.Name
+                            .gitHubCopilotShouldRefreshEditorInformation.rawValue
+                    )
+                    await MainActor.run {
+                        toast("Fetching MCP tools...", .info)
+                    }
+                } catch {
+                    await MainActor.run {
+                        toast(error.localizedDescription, .error)
+                    }
+                }
             }
         }
     }

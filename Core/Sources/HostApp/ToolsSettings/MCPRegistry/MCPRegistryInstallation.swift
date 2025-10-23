@@ -263,25 +263,8 @@ public class MCPRegistryService: ObservableObject {
         let jsonData = try JSONSerialization.data(withJSONObject: config, options: [.prettyPrinted])
         try jsonData.write(to: configFileURL)
 
-        // Update UserDefaults and trigger refresh
-        // Extract only the "servers" object to save to UserDefaults (consistent with ToolsConfigView)
-        if let serversDict = config["servers"] as? [String: Any] {
-            let serversData = try JSONSerialization.data(withJSONObject: serversDict, options: [.prettyPrinted])
-            if let jsonString = String(data: serversData, encoding: .utf8) {
-                UserDefaults.shared.set(jsonString, for: \.gitHubCopilotMCPConfig)
-            }
-        }
-
-        Task {
-            do {
-                let service = try getService()
-                try await service.postNotification(
-                    name: Notification.Name.gitHubCopilotShouldRefreshEditorInformation.rawValue
-                )
-            } catch {
-                Logger.client.error("Failed to post refresh notification: \(error)")
-            }
-        }
+        // Note: UserDefaults update and notification will be handled by ToolsConfigView's file monitor
+        // with debouncing to prevent duplicate notifications
     }
 
     // MARK: - Server Installation Status

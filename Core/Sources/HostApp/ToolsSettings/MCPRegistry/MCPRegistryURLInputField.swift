@@ -13,6 +13,7 @@ struct MCPRegistryURLInputField: View {
     let isSheet: Bool
     let mcpRegistryEntry: MCPRegistryEntry?
     let onValidationChange: ((Bool) -> Void)?
+    let onCommit: (() -> Void)?
     
     private var isRegistryOnly: Bool {
         mcpRegistryEntry?.registryAccess == .registryOnly
@@ -23,13 +24,15 @@ struct MCPRegistryURLInputField: View {
         maxURLLength: Int = 2048,
         isSheet: Bool = false,
         mcpRegistryEntry: MCPRegistryEntry? = nil,
-        onValidationChange: ((Bool) -> Void)? = nil
+        onValidationChange: ((Bool) -> Void)? = nil,
+        onCommit: (() -> Void)? = nil
     ) {
         self._urlText = urlText
         self.maxURLLength = maxURLLength
         self.isSheet = isSheet
         self.mcpRegistryEntry = mcpRegistryEntry
         self.onValidationChange = onValidationChange
+        self.onCommit = onCommit
     }
     
     var body: some View {
@@ -43,6 +46,9 @@ struct MCPRegistryURLInputField: View {
                             .onChange(of: urlText) { newValue in
                                 handleURLChange(newValue)
                             }
+                            .onSubmit {
+                                onCommit?()
+                            }
                     }
                 } else {
                     TextField("MCP Registry URL:", text: $urlText)
@@ -52,6 +58,9 @@ struct MCPRegistryURLInputField: View {
                         .onChange(of: urlText) { newValue in
                             handleURLChange(newValue)
                         }
+                        .onSubmit {
+                            onCommit?()
+                        }
                 }
                 
                 Menu {
@@ -59,6 +68,7 @@ struct MCPRegistryURLInputField: View {
                         Button(url) {
                             urlText = url
                             isFocused = false
+                            onCommit?()
                         }
                     }
                     
@@ -66,6 +76,7 @@ struct MCPRegistryURLInputField: View {
                     
                     Button("Reset to Default") {
                         urlText = defaultMCPRegistryURL
+                        onCommit?()
                     }
                     
                     if !urlHistory.isEmpty {

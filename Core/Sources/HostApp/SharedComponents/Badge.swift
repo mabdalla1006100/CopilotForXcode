@@ -22,12 +22,14 @@ struct BadgeItem {
 
 struct Badge: View {
     let text: String
+    let attributedText: AttributedString?
     let level: BadgeItem.Level
     let icon: String?
     let isSelected: Bool
 
     init(badgeItem: BadgeItem) {
         text = badgeItem.text
+        attributedText = nil
         level = badgeItem.level
         icon = badgeItem.icon
         isSelected = badgeItem.isSelected
@@ -35,6 +37,15 @@ struct Badge: View {
 
     init(text: String, level: BadgeItem.Level, icon: String? = nil, isSelected: Bool = false) {
         self.text = text
+        self.attributedText = nil
+        self.level = level
+        self.icon = icon
+        self.isSelected = isSelected
+    }
+    
+    init(attributedText: AttributedString, level: BadgeItem.Level, icon: String? = nil, isSelected: Bool = false) {
+        self.text = String(attributedText.characters)
+        self.attributedText = attributedText
         self.level = level
         self.icon = icon
         self.isSelected = isSelected
@@ -47,10 +58,18 @@ struct Badge: View {
                     .font(.caption2)
                     .padding(.vertical, 1)
             }
-            Text(text)
-                .fontWeight(.semibold)
-                .font(.caption2)
-                .lineLimit(1)
+            if let attributedText = attributedText {
+                Text(attributedText)
+                    .fontWeight(.semibold)
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            } else {
+                Text(text)
+                    .fontWeight(.semibold)
+                    .font(.caption2)
+                    .lineLimit(1)
+            }
         }
         .padding(.vertical, 1)
         .padding(.horizontal, 3)
@@ -77,5 +96,6 @@ struct Badge: View {
                 lineWidth: 1
             )
         )
+        .help(text)
     }
 }

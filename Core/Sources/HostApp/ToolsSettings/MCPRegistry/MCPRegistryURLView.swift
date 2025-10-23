@@ -75,8 +75,12 @@ struct MCPRegistryURLView: View {
                             maxURLLength: maxURLLength,
                             isSheet: false,
                             mcpRegistryEntry: mcpRegistry?.first,
-                            onValidationChange: { isValid in
-                                if isValid && (!tempURLText.isEmpty || tempURLText.isEmpty) {
+                            onValidationChange: { _ in
+                                // Only validate, don't update mcpRegistryURL here
+                            },
+                            onCommit: {
+                                // Update mcpRegistryURL when user presses Enter
+                                if tempURLText != mcpRegistryURL {
                                     mcpRegistryURL = tempURLText
                                 }
                             }
@@ -105,6 +109,7 @@ struct MCPRegistryURLView: View {
             )
             .animation(.easeInOut(duration: 0.3), value: isExpanded)
             .onAppear {
+                tempURLText = mcpRegistryURL
                 Task { await getMCPRegistryAllowlist() }
             }
             .onReceive(DistributedNotificationCenter.default().publisher(for: .authStatusDidChange)) { _ in
@@ -122,6 +127,11 @@ struct MCPRegistryURLView: View {
     }
     
     private func loadMCPServers() async {
+        // Update mcpRegistryURL with current tempURLText before loading
+        if tempURLText != mcpRegistryURL {
+            mcpRegistryURL = tempURLText
+        }
+        
         isLoading = true
         defer { isLoading = false }
         do {
@@ -208,7 +218,17 @@ struct MCPRegistryURLView: View {
         defer { isLoading = false }
         
         // Let the view model handle the entire update flow including clearing and fetching
-        await MCPServerGalleryWindow.refreshFromURL(mcpRegistryEntry: mcpRegistry?.first)
+        if let error = await MCPServerGalleryWindow.refreshFromURL(mcpRegistryEntry: mcpRegistry?.first) {
+            // Display error in the URL view
+            if let serviceError = error as? XPCExtensionServiceError {
+                errorMessage = serviceError.underlyingError?.localizedDescription ?? serviceError.localizedDescription
+            } else {
+                errorMessage = error.localizedDescription
+            }
+            isExpanded = true
+        } else {
+            errorMessage = ""
+        }
     }
 }
 

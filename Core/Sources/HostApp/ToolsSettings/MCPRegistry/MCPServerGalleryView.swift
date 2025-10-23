@@ -5,6 +5,7 @@ import GitHubCopilotService
 import Logger
 import SharedUIComponents
 import SwiftUI
+import XPCShared
 
 enum MCPServerGalleryWindow {
     static let identifier = "MCPServerGalleryWindow"
@@ -53,8 +54,8 @@ enum MCPServerGalleryWindow {
         currentViewModel?.updateData(serverList: serverList, mcpRegistryEntry: mcpRegistryEntry)
     }
     
-    @MainActor static func refreshFromURL(mcpRegistryEntry: MCPRegistryEntry? = nil) async {
-        await currentViewModel?.refreshFromURL(mcpRegistryEntry: mcpRegistryEntry)
+    @MainActor static func refreshFromURL(mcpRegistryEntry: MCPRegistryEntry? = nil) async -> Error? {
+        return await currentViewModel?.refreshFromURL(mcpRegistryEntry: mcpRegistryEntry)
     }
     
     static func isOpen() -> Bool {
@@ -87,6 +88,14 @@ struct MCPServerGalleryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if let error = viewModel.lastError {
+                if let serviceError = error as? XPCExtensionServiceError {
+                    Badge(text: serviceError.underlyingError?.localizedDescription ?? serviceError.localizedDescription, level: .danger, icon: "xmark.circle.fill")
+                } else {
+                    Badge(text: error.localizedDescription, level: .danger, icon: "xmark.circle.fill")
+                }
+            }
+            
             tableHeaderView
             serverListView
         }

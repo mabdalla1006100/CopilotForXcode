@@ -28,6 +28,7 @@ final class MCPServerGalleryViewModel: ObservableObject {
     @Published var pendingServer: MCPRegistryServerDetail?
     @Published var infoSheetServer: MCPRegistryServerDetail?
     @Published var mcpRegistryEntry: MCPRegistryEntry?
+    @Published private(set) var lastError: Error?
 
     @AppStorage(\.mcpRegistryURL) var mcpRegistryURL
 
@@ -154,11 +155,12 @@ final class MCPServerGalleryViewModel: ObservableObject {
             searchText = ""
 
             // Load servers from the base URL
-            await loadServerList(resetToFirstPage: true)
+            _ = await loadServerList(resetToFirstPage: true)
         }
     }
     
-    func refreshFromURL(mcpRegistryEntry: MCPRegistryEntry? = nil) async {
+    // Called from Settings view to refresh with optional new registry entry
+    func refreshFromURL(mcpRegistryEntry: MCPRegistryEntry? = nil) async -> Error? {
         isRefreshing = true
         defer { isRefreshing = false }
         
@@ -170,10 +172,12 @@ final class MCPServerGalleryViewModel: ObservableObject {
         Logger.client.info("Cleared gallery view model data for refresh")
         
         // Load servers from the base URL
-        await loadServerList(resetToFirstPage: true)
+        let error = await loadServerList(resetToFirstPage: true)
         
         // Reload installed servers after fetching new data
         loadInstalledServers()
+        
+        return error
     }
     
     func updateData(serverList: MCPRegistryServerList, mcpRegistryEntry: MCPRegistryEntry? = nil) {
@@ -214,7 +218,7 @@ final class MCPServerGalleryViewModel: ObservableObject {
         }
     }
 
-    private func loadServerList(resetToFirstPage: Bool) async {
+    private func loadServerList(resetToFirstPage: Bool) async -> Error? {
         if resetToFirstPage {
             isInitialLoading = true
         } else {
@@ -225,6 +229,8 @@ final class MCPServerGalleryViewModel: ObservableObject {
             isInitialLoading = false
             isLoadingMore = false
         }
+        
+        lastError = nil
 
         do {
             let service = try getService()
@@ -247,8 +253,12 @@ final class MCPServerGalleryViewModel: ObservableObject {
                 servers.append(contentsOf: serverList?.servers ?? [])
                 registryMetadata = serverList?.metadata
             }
+            
+            return nil
         } catch {
             Logger.client.error("Failed to load MCP servers: \(error)")
+            lastError = error
+            return error
         }
     }
 

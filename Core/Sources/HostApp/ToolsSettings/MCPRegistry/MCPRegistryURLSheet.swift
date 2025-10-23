@@ -66,6 +66,6 @@ struct MCPRegistryURLSheet: View {
     }
 
     private func openHelpLink() {
-        NSWorkspace.shared.open(URL(string: "https://registry.mcpservers.org")!)
+        NSWorkspace.shared.open(URL(string: "https://docs.github.com/en/copilot/how-tos/provide-context/use-mcp/select-an-mcp-registry")!)
     }
 }

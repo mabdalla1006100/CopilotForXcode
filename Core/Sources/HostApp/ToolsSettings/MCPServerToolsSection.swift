@@ -3,6 +3,7 @@ import Persist
 import GitHubCopilotService
 import Client
 import Logger
+import Foundation
 
 /// Section for a single server's tools
 struct MCPServerToolsSection: View {
@@ -23,7 +24,18 @@ struct MCPServerToolsSection: View {
             if serverTools.status == .error || serverTools.status == .blocked {
                 let message = extractErrorMessage(serverTools.error?.description ?? "")
                 if serverTools.status == .error {
-                    Badge(text: message, level: .danger, icon: "xmark.circle.fill")
+                    Badge(
+                        attributedText: createErrorMessage(message),
+                        level: .danger,
+                        icon: "xmark.circle.fill"
+                    )
+                    .environment((\.openURL), OpenURLAction { url in
+                        if url.absoluteString == "mcp://open-config" {
+                            openMCPConfigFile()
+                            return .handled
+                        }
+                        return .systemAction
+                    })
                 } else if serverTools.status == .blocked {
                     Badge(text: serverTools.registryInfo ?? "Blocked", level: .warning, icon: "exclamationmark.triangle.fill")
                 }
@@ -33,6 +45,29 @@ struct MCPServerToolsSection: View {
                     .font(.system(size: 11))
             }
             Spacer()
+        }
+    }
+    
+    private func openMCPConfigFile() {
+        let url = URL(fileURLWithPath: mcpConfigFilePath)
+        NSWorkspace.shared.open(url)
+    }
+    
+    private func createErrorMessage(_ baseMessage: String) -> AttributedString {
+        if hasServerConfigPlaceholders() {
+            var attributedString = AttributedString(baseMessage)
+            attributedString.append(AttributedString(". You may need to update placeholders in "))
+            
+            var mcpLink = AttributedString("mcp.json")
+            mcpLink.link = URL(string: "mcp://open-config")
+            mcpLink.underlineStyle = .single
+            
+            attributedString.append(mcpLink)
+            attributedString.append(AttributedString("."))
+            
+            return attributedString
+        } else {
+            return AttributedString(baseMessage)
         }
     }
     
@@ -119,6 +154,35 @@ struct MCPServerToolsSection: View {
         let start = description.index(messageRange.upperBound, offsetBy: 0)
         let end = description.index(stackRange.lowerBound, offsetBy: 0)
         return description[start..<end].trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private func hasServerConfigPlaceholders() -> Bool {
+        let configFileURL = URL(fileURLWithPath: mcpConfigFilePath)
+        
+        guard FileManager.default.fileExists(atPath: mcpConfigFilePath),
+              let data = try? Data(contentsOf: configFileURL),
+              let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let servers = jsonObject["servers"] as? [String: Any],
+              let serverConfig = servers[serverTools.name] else {
+            return false
+        }
+        
+        // Convert server config to JSON string
+        guard let serverData = try? JSONSerialization.data(withJSONObject: serverConfig, options: []),
+              let serverConfigString = String(data: serverData, encoding: .utf8) else {
+            return false
+        }
+        
+        // Check for placeholder patterns ending with }"
+        // Matches: "{PLACEHOLDER}", "${PLACEHOLDER}", "key={PLACEHOLDER}", "key=${PLACEHOLDER}", "${prefix:PLACEHOLDER}"
+        let placeholderPattern = "\"([a-zA-Z0-9_]+=)?\\$?\\{[a-zA-Z0-9_:\\-\\.]+\\}\""
+
+        guard let regex = try? NSRegularExpression(pattern: placeholderPattern, options: []) else {
+            return false
+        }
+        
+        let range = NSRange(serverConfigString.startIndex..<serverConfigString.endIndex, in: serverConfigString)
+        return regex.firstMatch(in: serverConfigString, options: [], range: range) != nil
     }
 
     private func initializeToolStates(server: MCPServerToolsCollection) {
